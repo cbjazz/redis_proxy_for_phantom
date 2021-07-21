@@ -6,8 +6,11 @@ from time import sleep
 
 import requests
 import json
+import traceback
 
-redis_servers = '3.37.123.184:6379'
+#TODO Should add redis server 
+# example 1.1.1.1:6379
+redis_servers = ''
 
 class Worker(Thread):
     def __init__(self, tasks):
@@ -96,24 +99,49 @@ class JobManager:
         request = self._getRequest(key)
         url = request['uri']
         method = request['method']
-        params = ''
-        if 'params' in request.keys(): 
-            params = request['params']
-        if method.upper() == 'GET':
-            res = requests.get(url, params=params)
-        elif method.upper() == 'POST':
-            res = requests.post(url, data=params)
-        else:
-            res = requests.get(url, params=params)
+        headers = {}
 
-        print("Response is: ")
-        print(res)
-        if res.status_code == 200:
-            print(res.json())
-            self._publish(key, json.dumps(res.json()) ) 
-            self._setStatus(key, "success")
-        else:
-            self._setStatus(key, "fail")
+        try:
+            print("Receive method: %s\n " \
+                  "          url: %s\n " \
+                  "          headers: %s\n " \
+                  "          data : %s" % (method, url, request['headers'], request['data']))
+
+            for hkey in request['headers']:
+                if hkey.lower() not in ['user-agent', 'host']: 
+                    headers[hkey] = request['headers'][hkey]
+
+            #res = requests.request(method, url, params=request['params'], headers=headers, data=request['data'])
+            #res = requests.request(method, url, params=request['params'], headers=headers, data=request['data'])
+            """ 
+            if 'params' in request.keys(): 
+                params = request['params']
+            """
+            print("Sending method: %s\n " \
+                  "          url: %s\n " \
+                  "          headers: %s\n " \
+                  "          data : %s" % (method, url, headers, request['data']))
+
+            if method.upper() == 'GET':
+                res = requests.get(url, headers=headers)
+            elif method.upper() == 'POST':
+                res = requests.post(url, headers=headers, data=request['data'])
+            else:
+                res = requests.get(url, headers=headers)
+
+
+            print("Response is: ")
+            print(res)
+            result = {"status_code" : res.status_code, "response" : json.dumps(res.json())}
+            if res.status_code == 200:
+                print(json.dumps(result))
+                self._publish(key, json.dumps(result) ) 
+                self._setStatus(key, "success")
+            else:
+                self._setStatus(key, "fail")
+                self._publish(key, json.dumps(result) ) 
+        except Exception as e:
+            print(e)
 
     def runJobs(self):
         while True:
