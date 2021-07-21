@@ -29,7 +29,8 @@ $ pip install -e ".[dev]"
   http-reply-from-proxy.py 소스 참조
 </div>
 <br/>
-3. Proxy 실행 하기
+
+3. Proxy 실행 하기 (내부에 있는 서버에서)
 <div>
   <pre>
   $ mitmproxy --set block_global=false -s ~/addon/http-reply-from-proxy.py
@@ -55,12 +56,18 @@ $ pip install -e ".[dev]"
 5. Phantom Assert 설정
 <div>
 ![image](https://user-images.githubusercontent.com/3444089/126444827-0149470a-6a68-499c-a7ae-cc910c3a4e74.png)
-</div
+</div>
 
+  
+<H3> 외부접속 Proxy 만들기 </H3>
+
+1. 외부 접속 수행하는 Worker 만들기 <- 나중에 daemon 으로 만들어야 함
+<div>
+  redis-worker.py 소스 참조
+</div>
+<br/>
+
+2. Worker 실행 
 <p>
   서버실행 : python redis-worker.py 
-</p>
-
-<p>
-  팬텀 테스트 코드 수행: python redis-worker.py
 </p>
