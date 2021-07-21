@@ -43,7 +43,7 @@ $ pip install -e ".[dev]"
   </pre>
   2) Phantom 서버에서 복사 된 내용 등록
   <pre>
-  $ cat > mitmproxy-ca.cer
+  $ cat > mitmproxy-ca.crt
   (복사한 내용 붙여넣기)
   ^D
   $ sudo phenv python3 /opt/phantom/bin/import_cert.py -i ./mitmproxy-ca.crt
