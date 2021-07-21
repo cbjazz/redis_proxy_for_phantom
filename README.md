@@ -25,6 +25,9 @@ $ pip install -e ".[dev]"
 
 <br/>
 2. Request Intercept 하는 add-on 만들기 
+<div>
+  http-reply-from-proxy.py 소스 참조
+</div>
 <br/>
 3. Proxy 실행 하기
 <div>
@@ -48,11 +51,11 @@ $ pip install -e ".[dev]"
   $ sudo $PHANTOM_HOME/bin/phsvc restart uwsgi
   </pre>
 </div>
-
-5. Phantom Assert 설정
 <br/>
+5. Phantom Assert 설정
+<div>
 ![image](https://user-images.githubusercontent.com/3444089/126444827-0149470a-6a68-499c-a7ae-cc910c3a4e74.png)
-
+</div
 
 <p>
   서버실행 : python redis-worker.py 
