@@ -1,23 +1,68 @@
+import sys
+from queue import Queue
+from threading import Thread
 import redis
-# from json import dumps
-import time
+from time import sleep
+
+import requests
+import json
+import traceback
+
+#TODO Should add redis server and port 
+#example 1.1.1.1:6379
+redis_servers = '' 
+
+class Worker(Thread):
+    def __init__(self, tasks):
+        Thread.__init__(self)
+        self.tasks = tasks
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        while True:
+            func, args, kargs = self.tasks.get()
+            try: 
+                func(*args, **kargs)
+            except Exception as e:
+                print(e)
+            finally:
+                self.tasks.task_done()
 
 
-class OuterRequest:
-    def __init__(self, servers, topic):
+class ThreadPool:
+    def __init__(self, thread_max):
+        self.tasks = Queue(thread_max)
+        for _ in range(thread_max):
+            Worker(self.tasks)
+
+    def add_task(self, func, *args, **kargs):
+        self.tasks.put((func, args, kargs))
+
+
+    def add_map(self, func, args_list):
+        for args in args_list:
+            self.add_task(func, args)
+
+    def wait_completion(self):
+        self.tasks.join()
+
+
+class JobManager:
+    def __init__(self, servers, thread_max=100):
         self.servers = servers
-        self.topic = "id:" + topic
         self.status_db = "proxy_status"
-        self.request_db = "proxy_request"
+        self.request_db = "proxy_request"        
         self._client = None
+        self._pool = None
+        self.thread_max = thread_max
         self._initialize()
 
     def _initialize(self):
-        self._createTopic()
+        self._pool = ThreadPool(self.thread_max)
 
     def _finallize(self):
         self._deleteTopic()
-        self._unsubscribeTopic()
         self._close()
 
     def _getClient(self):
@@ -27,77 +72,93 @@ class OuterRequest:
         return self._client
 
     def _close(self):
-        if self._client:
-            self._client.close()
+        if self._client :
+            self._clent.close()
 
-    def _createTopic(self):
+    def _setStatus(self, key, status):
+        self._getClient().hset( self.status_db, key, status)
+        print("Changed topic %s status is %s" % (key, status))
+   
+    def _getStatus(self, key):
         client = self._getClient()
-
-        client.hset( self.status_db, self.topic, 'new')
-        client.hset( self.request_db, self.topic, '')
-        print("Create Topic %s, Topic Status is %s" % (self.topic, 'new') )
-
-    def _deleteTopic(self):
-        client = self._getClient()
-        client.hdel( self.status_db, self.topic)
-        client.hdel( self.request_db, self.topic)
-        print("Delete Topic %s, Topic Status is %s" % (self.topic, 'close') )
-
-    def _addTopic(self, requestMessage):
-        client = self._getClient()
-
-        client.hset( self.status_db, self.topic, 'ready')
-        client.hset( self.request_db, self.topic, requestMessage)
-        print("Update Topic %s, Topic Status is %s" % (self.topic, 'ready') )
-        print("Request Message is %s" % (requestMessage) )
-
-    def _unsubscribeTopic(self):
-        client = self._getClient()
-        pubsub = client.pubsub()
-        pubsub.unsubscribe(self.topic)
-
-    def _getStatus(self):
-        client = self._getClient()
-        status = client.hget(self.status_db, self.topic).decode('utf-8')
-        print("Current Topic status is %s" % status)
+        status = client.hget(self.status_db, key).decode('utf-8')
+        print("Topic %s status is %s" % (key, status))
         return status
-
-    def _subscribeTopic(self, timeout=180):
+    
+    def _getRequest(self, key):
         client = self._getClient()
-        pubsub = client.pubsub()
-        result = []
+        request = json.loads(client.hget(self.request_db, key))
+        print("Topic %s request is %s" % (key,request))
+        return request
 
-        pubsub.subscribe(self.topic)
-        stop_time = time.time() + timeout
-        print("Wait Result with %s..." % (self.topic) )
-        while time.time() < stop_time:
-            message = pubsub.get_message(timeout=stop_time - time.time())
-            if message:
-                result.append( message['data'] )
-                print("Got Message %s" % (message['data']))
+    def _publish(self, key, result):
+        self._getClient().publish(key, result)
 
-            status = self._getStatus()
-            if status == "success" or status == "fail":
-                break
+    def run_http_request(self, key):
+        self._setStatus(key, "run")
+        request = self._getRequest(key)
+        url = request['uri']
+        method = request['method']
+        headers = {}
 
-        if len(result) < 1:
-            self._finallize()
-            print("Timeout, Shutdown")
+        try:
+            print("Receive method: %s\n " \
+                  "          url: %s\n " \
+                  "          headers: %s\n " \
+                  "          data : %s" % (method, url, request['headers'], request['data']))
 
-        self._finallize()
-        return result
+            for hkey in request['headers']:
+                if hkey.lower() not in ['user-agent', 'host']: 
+                    headers[hkey] = request['headers'][hkey]
 
-    def request(self, requestMessage, timeout=180):
-        self._addTopic(requestMessage)
-        result = self._subscribeTopic(timeout)
+            #res = requests.request(method, url, params=request['params'], headers=headers, data=request['data'])
+            #res = requests.request(method, url, params=request['params'], headers=headers, data=request['data'])
+            """ 
+            if 'params' in request.keys(): 
+                params = request['params']
+            """
+            print("Sending method: %s\n " \
+                  "          url: %s\n " \
+                  "          headers: %s\n " \
+                  "          data : %s" % (method, url, headers, request['data']))
 
-        return result
+            if method.upper() == 'GET':
+                res = requests.get(url, headers=headers)
+            elif method.upper() == 'POST':
+                res = requests.post(url, headers=headers, data=request['data'])
+            else:
+                res = requests.get(url, headers=headers)
+
+
+            print("Response is: ")
+            print(res)
+            result = {"status_code" : res.status_code, "response" : json.dumps(res.json())}
+            if res.status_code == 200:
+                print(json.dumps(result))
+                self._publish(key, json.dumps(result) ) 
+                self._setStatus(key, "success")
+            else:
+                self._setStatus(key, "fail")
+                self._publish(key, json.dumps(result) ) 
+        except Exception as e:
+            print(e)
+
+    def runJobs(self):
+        while True:
+            jobNum = 0
+            keys = self._getClient().hkeys(self.status_db)
+            for key in keys:
+                status = self._getStatus(key)
+                if status == "ready":
+                    jobNum =+ jobNum + 1
+                    self._setStatus(key, "wait")
+                    self._pool.add_task(self.run_http_request, key)
+
+            if jobNum == 0:
+                sleep(1)
+
+        self._pool.wait_completion()
+
 if __name__ == "__main__":
-    import uuid
-    redis_servers = '3.37.123.184:6379'
-    topic = str(uuid.uuid4())
-    start_time = time.time()
-    outerRequest = OuterRequest(redis_servers, topic)
-    outerRequest.request('{"uri" : "http://ipinfo.io/8.8.8.8/geo", "method" : "GET"}', 60)
-    end_time = time.time()
-    print("Total Execution Time: %f" % (end_time - start_time) )
+    jobManager = JobManager(redis_servers)
+    jobManager.runJobs()
