@@ -22,14 +22,12 @@ $ pipx inject mitmproxy redis # Redis library 를 mitmproxy 프로젝트에 추�
 $ pip install -e ".[dev]"  
   </pre>
 </dv>
-
 <br/>
 2. Request Intercept 하는 add-on 만들기 
 <div>
   http-reply-from-proxy.py 소스 참조
 </div>
 <br/>
-
 3. Proxy 실행 하기 (내부에 있는 서버에서)
 <div>
   <pre>
