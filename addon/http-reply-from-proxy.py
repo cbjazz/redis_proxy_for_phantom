@@ -6,7 +6,7 @@ import json
 def request(flow: http.HTTPFlow) -> None:
     # TODO Should change in properties file but HOWTO
     accept_host = ["api.abuseipdb.com"]
-    redis_server = "13.125.161.122:6379"
+    redis_server = "1.1.1.1:6379"
     header = {}
     host = ''
 
