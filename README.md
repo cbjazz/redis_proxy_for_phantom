@@ -66,11 +66,11 @@ $ pip install -e ".[dev]"
 <br/>
 
 2. Worker 실행 
-<p>
-  서버실행 : bin/start-server.sh
-</p>
+<pre>
+ $ bin/start-server.sh
+</pre>
 
 3. Worker 종료 
-<p>
-  서버실행 : bin/stop-server.sh
-</p>
+<pre>
+  $ bin/stop-server.sh
+</pre>
