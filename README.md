@@ -59,13 +59,18 @@ $ pip install -e ".[dev]"
   
 <H3> 외부접속 Proxy 만들기 </H3>
 
-1. 외부 접속 수행하는 Worker 만들기 <- 나중에 daemon 으로 만들어야 함
+1. 외부 접속 수행하는 Worker 만들기 
 <div>
-  redis-worker.py 소스 참조
+  redisworker.py 소스 참조
 </div>
 <br/>
 
 2. Worker 실행 
 <p>
-  서버실행 : python redis-worker.py 
+  서버실행 : bin/start-server.sh
+</p>
+
+3. Worker 종료 
+<p>
+  서버실행 : bin/stop-server.sh
 </p>
