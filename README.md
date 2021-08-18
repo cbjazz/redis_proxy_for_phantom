@@ -10,7 +10,7 @@
   <pre>
 $ mkdir mitmproxy_dev
 $ cd mitmproxy_dev/
-$ python3 -m venv  ./
+$ python3.8 -m venv  ./
 $ source bin/activate
 $ git clone https://github.com/mitmproxy/mitmproxy.git
 $ cd mitmproxy/
