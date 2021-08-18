@@ -16,7 +16,7 @@ $ git clone https://github.com/mitmproxy/mitmproxy.git
 $ cd mitmproxy/
 $ pip install --upgrade pip
 $ pip install pipx
-$ pip install mitmproxy
+$ pipx install mitmproxy
 $ pip install redis  
 $ pipx inject mitmproxy redis # Redis library 를 mitmproxy 프로젝트에 추가
 $ pip install -e ".[dev]"  
